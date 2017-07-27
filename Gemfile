@@ -5,3 +5,7 @@ group :doc do
   gem "pygmentize"
   gem "rocco", github: "rtomayko/rocco"
 end
+
+group :test do
+  gem "rspec"
+end

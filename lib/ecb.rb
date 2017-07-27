@@ -177,10 +177,10 @@ module Ecb
       abort "error: unable to read exchange rates from file #{input_file}"
     end
 
-    require "tempfile"
-    path = Tempfile.new
+    # The code can be safely run multiple times, always resulting in the same
+    # `rates.pstore` file written on disk.
     rates = Parse.read(input_file)
-    exchange = Persistence.new(path: path)
+    exchange = Persistence.new(path: "rates.pstore")
     exchange.save(rates)
     conversion = Conversion.new(exchange)
 

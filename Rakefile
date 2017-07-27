@@ -1,6 +1,9 @@
 require "rocco/tasks"
 Rocco::make "doc/", "lib/*.rb", stylesheet: "../style.css"
 
+require "rspec/core/rake_task"
+RSpec::Core::RakeTask.new(:spec)
+
 desc "Generate documentation (literate programming style)"
 task doc: :rocco
 

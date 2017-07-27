@@ -15,15 +15,10 @@ module Ecb
   require "bigdecimal"
 
   # The next step is parsing the CSV. We convert each row to a struct that we
-  # define for this purpose:
+  # define for this purpose.
 
   ExchangeRate = Struct.new(:from, :to, :date, :value)
 
-  # We skip `HEADER_LINES` and then proceed with reading the remaining rows,
-  # converting the exchange rate to a number. Notice that in order to avoid
-  # loosing precision, we explicitly convert strings into `BigDecimal`
-  # instances instead of `Float`s.
-  #
   # Reading the file this way will result in allocating an array of exchange
   # rates in memory. There are alternative approaches that allow us to avoid
   # allocation, for example using plain `foreach` and skipping the enumerable
@@ -36,34 +31,52 @@ module Ecb
   # persisting are separate).
 
   module Parse
-    HEADER_LINES = 5
-
     module_function
+
     def read(filename)
       rows = CSV.foreach(filename)
-      rows = rows.drop(HEADER_LINES)
+      rows = reject_headers(rows)
 
+      rates = parse_rows(rows)
+
+      rates.compact
+    end
+
+    # As ruby's CSV class does not support multiline headers, we attempt to
+    # reject irrelevant rows by checking if the first cell contains a date
+    # (altough the date could still be invalid at this point).
+    def reject_headers(rows)
+      rows.select { |row|
+        row[0] =~ /\A\d{4}-\d{2}-\d{2}/
+      }
+    end
+
+    def parse_rows(rows)
       rows.map { |(date, value)|
         date = parse_date(date)
         value = parse_value(value)
 
-        next if value == :not_available
+        next if date == :invalid || value == :invalid
 
         ExchangeRate.new(:usd, :eur, date, value)
-
-      }.compact
+      }
     end
 
+    # We try not to crash in case the date is invalid. There were no such rows
+    # in the downloaded CSV, but since we don't control the web service, we
+    # program defensively.
     def parse_date(string)
       Date.parse(string)
     rescue ArgumentError
-      abort "Unable to parse date: #{string.inspect}"
+      :invalid
     end
 
+    # Handle some cases when there is a given date, but no value is availalbe
+    # (the cell contains a `-`).
     def parse_value(string)
       BigDecimal(string)
     rescue ArgumentError
-      :not_available
+      :invalid
     end
   end
 
@@ -84,7 +97,9 @@ module Ecb
   #     (1 row)
   #
   # A different approach with a simpler key-value database like Redis would be
-  # to just blindly check for a previous day's value unless one is found.
+  # to just blindly check for a previous day's value unless one is found. A
+  # less naive approach would be to construct a data structure that contains a
+  # pointer to the previous available value (akin to a linked list).
   #
   # Because the assignment does not specify any expected performance
   # characteristics, we will opt for a simpler storage solution. In fact,
@@ -97,14 +112,14 @@ module Ecb
   # through marshalling, which could be an issue when moving a database
   # between machines with different architectures and/or ruby versions. As the
   # database can be rebuilt prior to use, we don't expect the need to share
-  # it, so PStore seems to be a good fit here.
+  # it.
 
   require "pstore"
 
-  # To take advantage of PStore we create a simple wrapper around it:
+  # To take advantage of PStore we create a simple wrapper.
 
   class Persistence
-    def initialize(path: "rates.pstore")
+    def initialize(path:)
       @store = PStore.new(path)
     end
 
@@ -115,7 +130,7 @@ module Ecb
     # the recursion will go a few levels deep at most.
     def retrieve(date)
       if date.year < 2000
-        raise ArgumentError, "Data not available before year 2000"
+        raise ArgumentError, "Data not available before 2000-01-01"
       end
 
       value =

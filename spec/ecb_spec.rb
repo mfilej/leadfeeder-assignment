@@ -15,7 +15,18 @@ module Ecb
       )
     end
 
-    it "handles entries that do not have a rate" do
+    it "handles entries that do not have a valid date" do
+      expect(
+        described_class.read("spec/fixtures/usdeur-nodate.csv")
+      ).to eq(
+        [
+          ExchangeRate.new(:usd, :eur, Date("2011-12-27"), 1.3069),
+          ExchangeRate.new(:usd, :eur, Date("2011-12-23"), 1.3057),
+        ]
+      )
+    end
+
+    it "handles entries that do not have a valid rate" do
       expect(
         described_class.read("spec/fixtures/usdeur-norate.csv")
       ).to eq(
@@ -78,7 +89,7 @@ module Ecb
     it "raises ArgumentError for dates before 2000" do
       expect do
         persistence.retrieve(Date.civil(1999))
-      end.to raise_error(ArgumentError, /before year 2000/)
+      end.to raise_error(ArgumentError, /before 2000/)
     end
   end
 

@@ -81,4 +81,20 @@ module Ecb
       end.to raise_error(ArgumentError, /before year 2000/)
     end
   end
+
+  describe Conversion do
+    let(:exchange) { double("exchange") }
+    let(:date) { Date("2011-03-05") }
+    subject(:conversion) { described_class.new(exchange) }
+
+    it "converts given amount of USD on given date to amount in EUR" do
+      allow(exchange).to receive(:retrieve)
+        .with(date)
+        .and_return(BigDecimal("1.3957"))
+
+      expect(
+        conversion.usd_to_eur(120, date)
+      ).to eq(BigDecimal("85.978362112201762556423300137"))
+    end
+  end
 end

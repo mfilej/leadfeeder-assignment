@@ -148,4 +148,43 @@ module Ecb
       end
     end
   end
+
+  # Finally, the interface to perform conversion.
+
+  class Conversion
+    attr_reader :exchange
+
+    def initialize(exchange)
+      @exchange = exchange
+    end
+
+    def usd_to_eur(amount, date)
+      rate = exchange.retrieve(date)
+      BigDecimal(amount) / rate
+    end
+  end
+
+  # ### Wiring it all together
+  #
+  # The code will only be run if the file is executed directly, e.g.:
+  #
+  #     ruby lib/ecb.rb rates/usdeur.csv
+
+  if File.identical?(__FILE__, $0)
+    input_file = $ARGV[0]
+
+    unless File.readable?(input_file)
+      abort "error: unable to read exchange rates from file #{input_file}"
+    end
+
+    require "tempfile"
+    path = Tempfile.new
+    rates = Parse.read(input_file)
+    exchange = Persistence.new(path: path)
+    exchange.save(rates)
+    conversion = Conversion.new(exchange)
+
+    # Returns what 120 USD was in euros on March 5, 2011.
+    puts "%.2f€" % conversion.usd_to_eur(120, Date.civil(2011, 3, 5))
+  end
 end

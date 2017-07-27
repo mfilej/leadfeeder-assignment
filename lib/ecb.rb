@@ -106,6 +106,12 @@ module Ecb
       @store = PStore.new(path)
     end
 
+    def retrieve(date)
+      read do |store|
+        store[date]
+      end
+    end
+
     def save(rates)
       write do |store|
         rates.each do |rate|
@@ -115,6 +121,12 @@ module Ecb
     end
 
     private
+
+    def read
+      @store.transaction(true) do
+        yield(@store)
+      end
+    end
 
     def write
       @store.transaction do

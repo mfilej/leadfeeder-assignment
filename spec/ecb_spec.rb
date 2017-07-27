@@ -46,5 +46,16 @@ module Ecb
         end
       end
     end
+
+    it "retrieves stored value for a given key" do
+      persistence.save([
+        ExchangeRate.new(:usd, :eur, Date("2017-07-25"), 1.1694),
+        ExchangeRate.new(:usd, :eur, Date("2017-07-24"), 1.1648),
+      ])
+
+      expect(
+        persistence.retrieve(Date("2017-07-25"))
+      ).to eq(1.1694)
+    end
   end
 end

@@ -2,7 +2,7 @@ require "ecb"
 require "tempfile"
 
 module Ecb
-  describe Parse do
+  describe Parser do
     it "parses exchange rates" do
       expect(
         described_class.read("spec/fixtures/usdeur-short.csv")

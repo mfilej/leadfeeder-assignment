@@ -34,7 +34,7 @@ module Ecb
   # trade-off. In exchange we get code that is more readable and also less
   # coupled (parsing and persisting are separate).
 
-  module Parse
+  module Parser
     module_function
 
     # There is no error handling when attempting to read the CSV file. Since
@@ -201,7 +201,7 @@ module Ecb
 
     # The code can be safely run multiple times, always resulting in the same
     # `rates.pstore` file written on disk.
-    rates = Parse.read(input_file)
+    rates = Parser.read(input_file)
     exchange = Persistence.new(path: "rates.pstore")
     exchange.save(rates)
     conversion = Conversion.new(exchange)

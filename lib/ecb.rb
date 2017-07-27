@@ -188,3 +188,21 @@ module Ecb
     puts "%.2f€" % conversion.usd_to_eur(120, Date.civil(2011, 3, 5))
   end
 end
+
+# ## Performance
+#
+# A simple benchmark with `benchmark/ips` showed poor results, averaging at 40
+# reads per seconds on my machine. This is due to the fact that we open a new
+# transaction for every read, which is a performance killer for PStore. A
+# quick modification that allowed the benchmark to run entirely within a
+# single transaction averaged at around 2 million reads per second.
+#
+# This means that in order to use this code in a production environment with
+# significant loads (e.g. the current performance might be adequate for a
+# command-line utility, for example), the code would have to be adapted to
+# open a transaction before peforming a sequence of reads. On the other side,
+# we can't keep the transaction open the entire time if we ever want to update
+# the exchange rates without interrupting the application.
+#
+# This solution is therefore, like most things in software and in life, a
+# tradeoff.

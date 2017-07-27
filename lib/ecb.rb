@@ -66,4 +66,60 @@ module Ecb
       :not_available
     end
   end
+
+  # ## Choosing a database
+  #
+  # Given the requirements, it seems that we need some kind of key-value
+  # store. Except for fetching exchange rates by date (the key), the only
+  # other required functionality is finding the nearest previous key, in case
+  # there is no exchange rate for the requested date (due to weekends,
+  # holidays, etc.). A more expressive query language like SQL would allow us
+  # to achieve this. A naive solution would be:
+  #
+  #     This will return value for 2017-06-02:
+  #     SELECT value FROM rates WHERE date <= '2017-06-04' LIMIT 1;
+  #      value
+  #     --------
+  #      1.1217
+  #     (1 row)
+  #
+  # A different approach with a simpler key-value database like Redis would be
+  # to just blindly check for a previous day's value unless one is found.
+  #
+  # Because the assignment does not specify any expected performance
+  # characteristics, we will opt for a simpler storage solution. In fact,
+  # given that the reviewer will probalby want to run the solution on their
+  # machine, it makes sense to use a solution that will be the easisest to set
+  # up.
+  #
+  # `PStore` from ruby's standard library seems like a good fit as it does not
+  # have any external dependencies. Ruby objects are persisted to PStore
+  # through marshalling, which could be an issue when moving a database
+  # between machines with different architectures and/or ruby versions. As the
+  # database can be rebuilt prior to use, we don't expect the need to share
+  # it, so PStore seems to be a good fit here.
+
+  require "pstore"
+
+  class Persistence
+    def initialize(path: "rates.pstore")
+      @store = PStore.new(path)
+    end
+
+    def save(rates)
+      write do |store|
+        rates.each do |rate|
+          store[rate.date] = rate.value
+        end
+      end
+    end
+
+    private
+
+    def write
+      @store.transaction do
+        yield(@store)
+      end
+    end
+  end
 end

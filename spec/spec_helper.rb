@@ -1,3 +1,9 @@
+module DateSpecHelper
+  def Date(string)
+    Date.parse(string)
+  end
+end
+
 # See http://rubydoc.info/gems/rspec-core/RSpec/Core/Configuration
 RSpec.configure do |config|
   config.expect_with :rspec do |expectations|
@@ -9,4 +15,6 @@ RSpec.configure do |config|
   end
 
   config.shared_context_metadata_behavior = :apply_to_host_groups
+
+  config.include(DateSpecHelper)
 end

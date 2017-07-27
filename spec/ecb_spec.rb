@@ -57,5 +57,28 @@ module Ecb
         persistence.retrieve(Date("2017-07-25"))
       ).to eq(1.1694)
     end
+
+    it "falls back to nearest previous available date when given date does not have an exchange rate" do
+      persistence.save([
+        ExchangeRate.new(:usd, :eur, Date("2017-01-19"), 1.0668),
+        ExchangeRate.new(:usd, :eur, Date("2017-01-11"), 1.0503),
+      ])
+
+      aggregate_failures do
+        expect(persistence.retrieve(Date("2017-01-18"))).to eq(1.0503)
+        expect(persistence.retrieve(Date("2017-01-17"))).to eq(1.0503)
+        expect(persistence.retrieve(Date("2017-01-16"))).to eq(1.0503)
+        expect(persistence.retrieve(Date("2017-01-15"))).to eq(1.0503)
+        expect(persistence.retrieve(Date("2017-01-14"))).to eq(1.0503)
+        expect(persistence.retrieve(Date("2017-01-13"))).to eq(1.0503)
+        expect(persistence.retrieve(Date("2017-01-12"))).to eq(1.0503)
+      end
+    end
+
+    it "raises ArgumentError for dates before 2000" do
+      expect do
+        persistence.retrieve(Date.civil(1999))
+      end.to raise_error(ArgumentError, /before year 2000/)
+    end
   end
 end

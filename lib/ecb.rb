@@ -101,15 +101,29 @@ module Ecb
 
   require "pstore"
 
+  # To take advantage of PStore we create a simple wrapper around it:
+
   class Persistence
     def initialize(path: "rates.pstore")
       @store = PStore.new(path)
     end
 
+    # We try to retrieve the stored value for a given date. If that fails, we
+    # try to retrieve the value for the previous day. The requirement to only
+    # return dates since the year 2000 conveniently serves as a recursion
+    # terminator. In practice, the gaps between dates are quite narrow, so
+    # the recursion will go a few levels deep at most.
     def retrieve(date)
-      read do |store|
-        store[date]
+      if date.year < 2000
+        raise ArgumentError, "Data not available before year 2000"
       end
+
+      value =
+        read do |store|
+          store[date]
+        end
+
+      value || retrieve(date.prev_day)
     end
 
     def save(rates)

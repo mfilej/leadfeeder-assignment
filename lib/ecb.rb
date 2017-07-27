@@ -4,15 +4,15 @@
 # store them in a database, and implement a Ruby API that will return the
 # value in EUR of a given amount of USD on a given day (since the start of the
 # year 2000).
-#
-# Fetching is a mundane administrative task that will be performed in a rake
-# task (`rake ecb:fetch`). This way we make it _pluggable_, so the user could
-# opt to perform the same task via curl, for example. This code will not care
-# as long as the file is present on the file system.
 
 module Ecb
 
   # ### Solution
+  #
+  # Fetching is a mundane administrative task that will be performed in a rake
+  # task (`rake ecb:fetch`). This way we make it _pluggable_, so the user could
+  # opt to perform the same task via curl, for example. This code will not care
+  # as long as the file is present on the file system.
   #
   # The next step is parsing the CSV.
 
@@ -23,20 +23,23 @@ module Ecb
 
   ExchangeRate = Struct.new(:from, :to, :date, :value)
 
-  # Reading the file this way will result in allocating an array of exchange
-  # rates in memory. There are alternative approaches that allow us to avoid
-  # allocation, for example using plain `foreach` and skipping the enumerable
-  # methods in favour of persisting the rows immediately to a database, all on
-  # one loop. Given that the CSV file is about 4000 lines long and that its
-  # growth is predictable (less than 1 line per day on average) and given that
-  # the requirements for this code did not specify any restrictions regarding
-  # resource usage, we think that this is a worthy trade-off. In exchange we
-  # get code that is more readable and also less coupled (parsing and
-  # persisting are separate).
+  # The way we chose to read CSV files will result in allocating an array of
+  # exchange rates in memory. There are alternative approaches that allow us
+  # to avoid allocation, for example using plain `foreach` and skipping the
+  # enumerable methods in favour of persisting the rows immediately to a
+  # database, all on one loop. Given that the CSV file is about 4000 lines
+  # long and that its growth is predictable (less than 1 line per day on
+  # average) and given that the requirements for this code did not specify any
+  # restrictions regarding resource usage, we think that this is a worthy
+  # trade-off. In exchange we get code that is more readable and also less
+  # coupled (parsing and persisting are separate).
 
   module Parse
     module_function
 
+    # There is no error handling when attempting to read the CSV file. Since
+    # the behaviour in case of an error is not specified, and there is not
+    # much we can do without a valid CSV file, we just let the program crash.
     def read(filename)
       rows = CSV.foreach(filename)
       rows = reject_headers(rows)
@@ -217,7 +220,7 @@ end
 # single transaction averaged at around 2 million reads per second.
 #
 # This means that in order to use this code in a production environment with
-# significant loads (e.g. the current performance might be adequate for a
+# significant loads (the current performance might be adequate for a
 # command-line utility, for example), the code would have to be adapted to
 # open a transaction before performing a sequence of reads. On the other side,
 # we can't keep the transaction open the entire time if we ever want to update

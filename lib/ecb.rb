@@ -8,25 +8,29 @@
 # Fetching is a mundane administrative task that will be performed in a rake
 # task (`rake ecb:fetch`). This way we make it _pluggable_, so the user could
 # opt to perform the same task via curl, for example. This code will not care
-# as long as the file is present on the filesystem.
+# as long as the file is present on the file system.
 
 module Ecb
+
+  # ### Solution
+  #
+  # The next step is parsing the CSV.
+
   require "csv"
   require "bigdecimal"
 
-  # The next step is parsing the CSV. We convert each row to a struct that we
-  # define for this purpose.
+  # We convert each row to a struct that we define for this purpose.
 
   ExchangeRate = Struct.new(:from, :to, :date, :value)
 
   # Reading the file this way will result in allocating an array of exchange
   # rates in memory. There are alternative approaches that allow us to avoid
   # allocation, for example using plain `foreach` and skipping the enumerable
-  # methods in favour of persisting the rows immediately to a database. Given
-  # that the CSV file is about 4000 lines long and that its growth is
-  # predictable (less than 1 line per day on average) and given that the
-  # requirements for this code did not specify any restrictions regarding
-  # resource usage, we think that this is a worthy tradeoff. In exchange we
+  # methods in favour of persisting the rows immediately to a database, all on
+  # one loop. Given that the CSV file is about 4000 lines long and that its
+  # growth is predictable (less than 1 line per day on average) and given that
+  # the requirements for this code did not specify any restrictions regarding
+  # resource usage, we think that this is a worthy trade-off. In exchange we
   # get code that is more readable and also less coupled (parsing and
   # persisting are separate).
 
@@ -42,9 +46,9 @@ module Ecb
       rates.compact
     end
 
-    # As ruby's CSV class does not support multiline headers, we attempt to
+    # As ruby's CSV class does not support multi-line headers, we attempt to
     # reject irrelevant rows by checking if the first cell contains a date
-    # (altough the date could still be invalid at this point).
+    # (although the date could still be invalid at this point).
     def reject_headers(rows)
       rows.select { |row|
         row[0] =~ /\A\d{4}-\d{2}-\d{2}/
@@ -71,7 +75,7 @@ module Ecb
       :invalid
     end
 
-    # Handle some cases when there is a given date, but no value is availalbe
+    # Handle some cases where the row has a date, but no value is available
     # (the cell contains a `-`).
     def parse_value(string)
       BigDecimal(string)
@@ -80,7 +84,7 @@ module Ecb
     end
   end
 
-  # ## Choosing a database
+  # ### Choosing a database
   #
   # Given the requirements, it seems that we need some kind of key-value
   # store. Except for fetching exchange rates by date (the key), the only
@@ -103,8 +107,8 @@ module Ecb
   #
   # Because the assignment does not specify any expected performance
   # characteristics, we will opt for a simpler storage solution. In fact,
-  # given that the reviewer will probalby want to run the solution on their
-  # machine, it makes sense to use a solution that will be the easisest to set
+  # given that the reviewer will probably want to run the solution on their
+  # machine, it makes sense to use a solution that will be the easiest to set
   # up.
   #
   # `PStore` from ruby's standard library seems like a good fit as it does not
@@ -204,7 +208,7 @@ module Ecb
   end
 end
 
-# ## Performance
+# ### Performance
 #
 # A simple benchmark with `benchmark/ips` showed poor results, averaging at 40
 # reads per seconds on my machine. This is due to the fact that we open a new
@@ -215,9 +219,9 @@ end
 # This means that in order to use this code in a production environment with
 # significant loads (e.g. the current performance might be adequate for a
 # command-line utility, for example), the code would have to be adapted to
-# open a transaction before peforming a sequence of reads. On the other side,
+# open a transaction before performing a sequence of reads. On the other side,
 # we can't keep the transaction open the entire time if we ever want to update
 # the exchange rates without interrupting the application.
 #
 # This solution is therefore, like most things in software and in life, a
-# tradeoff.
+# trade-off.
